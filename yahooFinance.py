@@ -2,6 +2,7 @@ import time
 import datetime
 import pandas as pd
 import requests
+import re
 from selenium import webdriver
 from bs4 import BeautifulSoup
 
@@ -14,11 +15,7 @@ class Crawler:
         self.TO = datetime.datetime.now()
         self.result = []
         self.title = ''
-        self.comInfo = ''
-        self.comTime = ''
-        self.comText = ''
         self.boardNum = 0
-        self.cnt = 0
 
     def main(self):
         source = requests.get(self.URL).text
@@ -27,10 +24,9 @@ class Crawler:
         self.title = soup.find("span", itemprop="name").text.split(' ')[0]
 
         loop = (self.TO - self.FROM).days
-        while loop >= 0:
+        for i in range(loop + 1):
             self.yahooFinanceCrawler()
             self.boardNum -= 1
-            loop -= 1
 
         self.saveCsv(self.result)
 
@@ -55,16 +51,23 @@ class Crawler:
 
         for key in hotKeys:
             try:
-                self.comInfo = key.find("p", class_="comWriter").text.split('\n')
-                if len(self.comInfo) == 5:
-                    self.comTime = self.comInfo[3]
+                comInfo = key.find("p", class_="comWriter").text.split('\n')
+                if len(comInfo) == 5:
+                    comTime = comInfo[3]
                 else:
-                    self.comTime = self.comInfo[2]
+                    comTime = comInfo[2]
             except AttributeError:
                 continue
-            self.comText = key.find("p", class_="comText").text.replace('\n', '')
-            self.cnt += 1
-            row = [self.cnt, self.comTime, self.comText]
+            if len(comTime) <= 12:
+                comTime = '2021-' + comTime.replace('月', '-').replace('日', '')
+            else:
+                comTime = comTime.replace('年', '-').replace('月', '-').replace('日', '')
+            comTime = datetime.datetime.strptime(comTime, '%Y-%m-%d %H:%M')
+            comText = key.find("p", class_="comText").text.replace('\n', '')
+            comNum = key.find("span", class_="comNum").text
+            comNum = re.findall('\d+', comNum)[0]
+            index = self.title.zfill(6) + str(self.boardNum).zfill(4) + comNum.zfill(4)
+            row = [index, comTime, comText]
             self.result.append(row)
 
     def saveCsv(self, result):
@@ -77,5 +80,5 @@ class Crawler:
 if __name__ == '__main__':
     # url = 'https://finance.yahoo.co.jp/cm/message/1998407/ffc7pjbf6q3t2a'
     url = 'https://finance.yahoo.co.jp/cm/message/1023337/e9faca58a5ca59a5c0a5ca5afbbxbft'
-    crawling = Crawler(url, FROM="2021-02-07")
+    crawling = Crawler(url, FROM="2021-02-08")
     crawling.main()
