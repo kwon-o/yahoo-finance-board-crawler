@@ -9,10 +9,10 @@ from bs4 import BeautifulSoup
 
 class Crawler:
 
-    def __init__(self, URL, FROM=datetime.datetime.now().strftime("%Y-%m-%d")):
+    def __init__(self, URL, START=datetime.datetime.now().strftime("%Y-%m-%d")):
         self.URL = URL
-        self.FROM = datetime.datetime.strptime(FROM, '%Y-%m-%d')
-        self.TO = datetime.datetime.now()
+        self.START = datetime.datetime.strptime(START, '%Y-%m-%d')
+        self.END = datetime.datetime.now()
         self.result = []
         self.title = ''
         self.boardNum = 0
@@ -22,8 +22,10 @@ class Crawler:
         soup = BeautifulSoup(source, "html.parser")
         self.boardNum = int(soup.find("div", class_="threadAbout").h1.a["href"].split('/')[-1])
         self.title = soup.find("span", itemprop="name").text.split(' ')[0]
-
-        loop = (self.TO - self.FROM).days
+        """
+        クロールしたい期間のループを設定
+        """
+        loop = (self.END - self.START).days
         for i in range(loop + 1):
             self.yahooFinanceCrawler()
             self.boardNum -= 1
@@ -31,6 +33,10 @@ class Crawler:
         self.saveCsv(self.result)
 
     def yahooFinanceCrawler(self):
+        """
+        seleniumでページを更新し、
+        全ページのコメントをクローリング
+        """
         driver = webdriver.Chrome(executable_path='chromedriver')
         driver.get(url=self.URL + "/" + str(self.boardNum))
 
@@ -65,7 +71,8 @@ class Crawler:
             comTime = datetime.datetime.strptime(comTime, '%Y-%m-%d %H:%M')
             comText = key.find("p", class_="comText").text.replace('\n', '')
             comNum = key.find("span", class_="comNum").text
-            comNum = re.findall('\d+', comNum)[0]
+            comNum = re.findall("\d+", comNum)[0]
+            # index = 銘柄コード(6文) + 掲示板番号(4文) + コメント番号(4文)
             index = self.title.zfill(6) + str(self.boardNum).zfill(4) + comNum.zfill(4)
             row = [index, comTime, comText]
             self.result.append(row)
@@ -78,7 +85,11 @@ class Crawler:
 
 
 if __name__ == '__main__':
+    '''
+    url = 掲示板のリンク
+    START = 指定する日から今日までの掲示板のコメントをクロール
+    '''
     # url = 'https://finance.yahoo.co.jp/cm/message/1998407/ffc7pjbf6q3t2a'
     url = 'https://finance.yahoo.co.jp/cm/message/1023337/e9faca58a5ca59a5c0a5ca5afbbxbft'
-    crawling = Crawler(url, FROM="2021-02-08")
+    crawling = Crawler(url, START="2021-02-08")
     crawling.main()
