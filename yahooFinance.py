@@ -11,46 +11,47 @@ class Crawler:
 
     def __init__(self, URL, START=datetime.datetime.now().strftime("%Y-%m-%d")):
         self.URL = URL
-        self.START = datetime.datetime.strptime(START, '%Y-%m-%d')
+        self.START = datetime.datetime.strptime(START, '%Y-%m-%d')  # 文字列引数をDate系に変更
         self.END = datetime.datetime.now()
         self.result = []
         self.title = ''
         self.boardNum = 0
 
     def main(self):
+        """
+        リンクから掲示板番号を取得して開始点を設定
+        """
         source = requests.get(self.URL).text
         soup = BeautifulSoup(source, "html.parser")
         self.boardNum = int(soup.find("div", class_="threadAbout").h1.a["href"].split('/')[-1])
         self.title = soup.find("span", itemprop="name").text.split(' ')[0]
         """
-        クロールしたい期間のループを設定
+        クロールしたい期間のループを設定し、クローリング開始
         """
         loop = (self.END - self.START).days
         for i in range(loop + 1):
             self.yahooFinanceCrawler()
             self.boardNum -= 1
 
-        self.saveCsv(self.result)
+        self.saveCsv(self.result)  # クローリングが終わったらcsvに保存
 
-    def yahooFinanceCrawler(self):
-        """
-        seleniumでページを更新し、
-        全ページのコメントをクローリング
-        """
+    def yahooFinanceCrawler(self): # seleniumでページを更新し、全ページのコメントをクローリング
         driver = webdriver.Chrome(executable_path='chromedriver')
         driver.get(url=self.URL + "/" + str(self.boardNum))
 
-        SCROLL_PAUSE_SEC = 2
-        last_height = driver.execute_script("return document.body.scrollHeight")
+        SCROLL_PAUSE_SEC = 2  # 待機時間(秒)
+        last_height = driver.execute_script("return document.body.scrollHeight")  # 初期ブラウザの高さ
 
         while True:
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
             time.sleep(SCROLL_PAUSE_SEC)
-            new_height = driver.execute_script("return document.body.scrollHeight")
-            if new_height == last_height:
+            new_height = driver.execute_script("return document.body.scrollHeight")  # スクロールを下した後の高さ
+            if new_height == last_height:  # スクロールを下した後の高さ = 現在の高さになるまでループ(下るページがもうない)
                 break
-            last_height = new_height
-
+            last_height = new_height  # 高さをスクロールを下した後の高さに更新
+        '''
+        スクロールを一番下まで下ったら、本文をクローリング
+        '''
         html = driver.page_source
         soup = BeautifulSoup(html, 'html.parser')
         hotKeys = soup.find_all("div", class_="comment")
@@ -77,7 +78,7 @@ class Crawler:
             row = [index, comTime, comText]
             self.result.append(row)
 
-    def saveCsv(self, result):
+    def saveCsv(self, result):  # クローリングの内容をcsvに保存
         now = datetime.datetime.now().strftime("%Y%m%d")
         csv_name = now + "_" + self.title + ".csv"
         result = pd.DataFrame(result, columns=['index', 'time', 'text'])
