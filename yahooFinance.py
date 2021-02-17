@@ -61,7 +61,7 @@ class Crawler:
         allCommentHtml = subBoardHtmlParse.find_all("div", class_="comment")[:-1]  # 最後は管理者のコメントなので除外
 
         for eachCommentHtml in allCommentHtml:
-            try:
+            try:  # 広告を処理するための例外処理
                 timeLocationCheck = eachCommentHtml.find("p", class_="comWriter").text.split('\n')
                 # 時間の位置には2つのパタンがある
                 if len(timeLocationCheck) == 5:
