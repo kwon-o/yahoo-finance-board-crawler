@@ -7,8 +7,9 @@ seleniumを活用した掲示板のコメントを取得するクローラです
 * コーディングのスタイルガイドはPEP8を準拠しています。
 * selenium, BeautifulSoup, requestsライブラリが必要です。
 
-''' python
+``` python
 $ pip install beautifulsoup4
 $ pip install requests
 $ pip install selenium
-'''
+```
+
